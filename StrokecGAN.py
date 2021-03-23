@@ -2,6 +2,12 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import tensorflow as tf
+
+if tf.test.gpu_device_name():
+    print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
+else:
+    print("Please install GPU version of TF")
 
 latent_dim = 200 # dimension of the latent space
 n_samples = 869 # size of our dataset
@@ -12,10 +18,9 @@ X = pd.read_csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/fin
 X = X.drop(X.columns[0], axis=1)
 y = X['isoutlier']
 y = y.astype(int)
-print(y)
-print('Size of our dataset:', len(X))
-print('Number of features:', X.shape[1])
-print('Classes:', set(y))
+#print('Size of our dataset:', len(X))
+#print('Number of features:', X.shape[1])
+#print('Classes:', set(y))
 X = np.asarray(X).astype('float32')
 
 # normalising the data to help with learning, this may not be necessary im not sure. 
@@ -31,12 +36,11 @@ pca = PCA(n_components=2)
 pca_result = pca.fit_transform(scaled_X)
 plt.figure()
 plt.scatter(pca_result[:, 0], pca_result[:, 1], c=y)
-plt.show()
+
 
 
 # Some imports for the model layers
-from keras.layers \
-    import Activation, Dropout, Flatten, Dense, Input, LeakyReLU
+from keras.layers import Activation, Dropout, Flatten, Dense, Input, LeakyReLU
 # Normalization layers
 from keras.layers import BatchNormalization
 # Merge layers
@@ -150,7 +154,7 @@ def get_random_batch(X, y, batch_size):
 
 def train_gan(gan, generator, discriminator, 
               X, y, 
-              n_epochs=2000, batch_size=32, 
+              n_epochs=1000, batch_size=32, 
               hist_every=10, log_every=100):
     '''
     Trains discriminator and generator separately in batches of size batch_size. 
@@ -243,7 +247,7 @@ plt.title('Training accuracy over time')
 plt.legend(['Acc real', 'Acc fake', 'Acc GAN'])
 
 
-def generate_samples(class_for, n_samples=20):
+def generate_samples(class_for, n_samples=40):
     '''
     Generates new random realistic features using the trained generator.
     Params:
@@ -271,8 +275,14 @@ def visualize_fake_features(fake_features, figsize=(15, 6), color='r'):
 #visualize_fake_features(features_class_0)
 features_class_1 = generate_samples(1)
 visualize_fake_features(features_class_1)
-features_class_0 = generate_samples(0)
-visualize_fake_features(features_class_0)
+
+class_1 = features_class_1, scaled_X.where(y==1)
+pca_class1 = pca.fit_transform(features_class_1)
+plt.figure()
+plt.scatter(pca_class1[:, 0], pca_class1[:, 1])
+#features_class_0 = generate_samples(0)
+#visualize_fake_features(features_class_0)
+
 
 
 plt.show() 
