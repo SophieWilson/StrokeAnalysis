@@ -8,14 +8,6 @@ n_samples = 869 # size of our dataset
 n_classes = 2 #(outlier or not)
 n_features = 91 # we use 2 (91 for data) features since we'd like to visualize them
 
-#from sklearn.datasets import make_blobs
-
-#X, y = make_blobs(n_samples=n_samples, centers=n_classes, n_features=n_features, random_state=123)
-
-#print('Size of our dataset:', len(X))
-#print('Number of features:', X.shape[1])
-#print('Classes:', set(y))
-
 X = pd.read_csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/final_processedvalues_outlier.csv')
 y = X['isoutlier']
 y = y.astype(int)
@@ -24,13 +16,14 @@ print('Number of features:', X.shape[1])
 print('Classes:', set(y))
 X = np.asarray(X).astype('float32')
 
+# normalising the data to help with learning, this may not be necessary im not sure. 
 from sklearn.preprocessing import MinMaxScaler
-
 scaler = MinMaxScaler(feature_range=(-1, 1))
 scaled_X = scaler.fit_transform(X)
 fig, ax = plt.subplots(figsize=(15, 4))
 legend = []
 
+# plotting the data
 for i in range(n_classes):
     plt.scatter(scaled_X[:, 0][np.where(y==i)], scaled_X[:, 1][np.where(y==i)], )
     legend.append('Class %d' % i)
@@ -172,7 +165,7 @@ def get_random_batch(X, y, batch_size):
 
 def train_gan(gan, generator, discriminator, 
               X, y, 
-              n_epochs=1000, batch_size=32, 
+              n_epochs=2000, batch_size=32, 
               hist_every=10, log_every=100):
     '''
     Trains discriminator and generator (last one through the GAN) 
@@ -249,7 +242,7 @@ def train_gan(gan, generator, discriminator,
 
 loss_real_hist, acc_real_hist, \
 loss_fake_hist, acc_fake_hist, \
-loss_gan_hist, acc_gan_hist = train_gan(gan, generator, discriminator, X, y)
+loss_gan_hist, acc_gan_hist = train_gan(gan, generator, discriminator, scaled_X, y)
 
 ax, fig = plt.subplots(figsize=(15, 6))
 plt.plot(loss_real_hist)

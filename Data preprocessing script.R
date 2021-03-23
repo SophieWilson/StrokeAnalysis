@@ -69,8 +69,8 @@ followupdata <- read.csv('BUCS_FollowUp Data_November2010_CT.csv', header = TRUE
 
 ### Going to start by working on the final set data ####
 # first split into meta and value dataframes
-metadatafollowup <- followupdata[,1:36]
-followup_values <- followupdata[,c(4, 37:ncol(followupdata))]
+metadatafollowup <- followupdata[,1:31]
+followup_values <- followupdata[,c(4, 32:ncol(followupdata))]
 f
 
 # convert all character values to NA, this includes n/a, NA, BLANK, blank etc. 
@@ -97,13 +97,13 @@ fuprocessed$OOBerror
 ## the 00b is 0.018 so its pretty good
 
 # Rounding the numbers to 2 dp. 
-processeddf[] <- lapply(processeddf[], round, 2)
+fuprocesseddf[] <- lapply(fuprocesseddf[], round, 2)
 # removing the metadata for participants with missing data (so the files match to merge them)
 metadatafollowup2<- metadatafollowup[ metadatafollowup$ID %in% fuprocesseddf$ID, ]
 # merging the datasets
 followup_processed <- cbind(metadatafollowup2, fuprocesseddf[,2:ncol(fuprocesseddf)])
 
-write.csv(followup_processed, 'C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/followup_processed' )
+write.csv(followup_processed, 'C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/followup_processed.csv' )
 
 
 ############## Playing around with outliers ###############
