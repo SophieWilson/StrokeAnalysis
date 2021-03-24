@@ -4,10 +4,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
-if tf.test.gpu_device_name():
-    print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
-else:
-    print("Please install GPU version of TF")
+import tensorflow as tf
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        # Currently, memory growth needs to be the same across GPUs
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+    except RuntimeError as e:
+        # Memory growth must be set before GPUs have been initialized
+        print(e)
 
 latent_dim = 200 # dimension of the latent space
 n_samples = 869 # size of our dataset
@@ -276,12 +284,16 @@ def visualize_fake_features(fake_features, figsize=(15, 6), color='r'):
 features_class_1 = generate_samples(1)
 visualize_fake_features(features_class_1)
 
-class_1 = features_class_1, scaled_X.where(y==1)
+class_1 = features_class_1
+real = scaled_X[:,0][np.where(y==1)], scaled_X[:, 0][np.where(y==1)]
 pca_class1 = pca.fit_transform(features_class_1)
+pca_real = pca.fit_transform(real)
 plt.figure()
 plt.scatter(pca_class1[:, 0], pca_class1[:, 1])
-#features_class_0 = generate_samples(0)
-#visualize_fake_features(features_class_0)
+plt.scatter(pca_real[:, 0], pca_real[:, 1])
+
+features_class_0 = generate_samples(0)
+visualize_fake_features(features_class_0)
 
 
 
