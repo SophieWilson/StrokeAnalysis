@@ -311,11 +311,11 @@ plt.title('PCA of dataset')
 
 # plotting dataset plus fakes
 plt.figure()
+plt.scatter(pca_result[:, 0], pca_result[:, 1], c=y)
 plt.scatter(pca_class1[:, 0], pca_class1[:, 1])
 plt.scatter(pca_class0[:, 0], pca_class0[:, 1])
-plt.scatter(pca_result[:, 0], pca_result[:, 1], c=y)
 plt.title('PCA of dataset with fake samples included')
-plt.legend(['Fitters', 'Non-fitters'])
+plt.legend(['', 'Fake Fitters', 'Fake Non-fitters'])
 
 # plotting class 1 (nonfitters)
 pca_nonfitter = pca.fit_transform(outlier_only)
@@ -328,10 +328,10 @@ plt.legend(['fake', 'real'])
 # plotting class 0 (fitters)
 pca_fitter = pca.fit_transform(fitter_only)
 plt.figure()
-plt.scatter(pca_class0[:,0], pca_class0[:,1])
 plt.scatter(pca_fitter[:,0], pca_fitter[:, 1])
+plt.scatter(pca_class0[:,0], pca_class0[:,1])
 plt.title('PCA of only fitter class')
-plt.legend(['fake', 'real'])
+plt.legend(['real', 'fake' ])
 
 
 plt.show()
