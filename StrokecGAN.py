@@ -23,8 +23,11 @@ n_classes = 2 #(outlier or not)
 n_features = 89 # we use 89 features as that is the amount in the data
 
 X = pd.read_csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/final_processedvalues_outlier.csv')
+outlier_only = X[X.isoutlier == True]
+fitter_only = X[X.isoutlier == False]
 X = X.drop(X.columns[0], axis=1)
 y = X['isoutlier']
+# 0 is fitter, 1 is non-fitter/outlier
 y = y.astype(int)
 #print('Size of our dataset:', len(X))
 #print('Number of features:', X.shape[1])
@@ -35,16 +38,8 @@ X = np.asarray(X).astype('float32')
 from sklearn.preprocessing import MinMaxScaler
 scaler = MinMaxScaler(feature_range=(-1, 1))
 scaled_X = scaler.fit_transform(X)
-fig, ax = plt.subplots(figsize=(15, 4))
-legend = []
-
-# visualising with PCA
-from sklearn.decomposition import PCA
-pca = PCA(n_components=2)
-pca_result = pca.fit_transform(scaled_X)
-plt.figure()
-plt.scatter(pca_result[:, 0], pca_result[:, 1], c=y)
-
+outlier_only = scaler.fit_transform(outlier_only)
+fitter_only = scaler.fit_transform(fitter_only)
 
 
 # Some imports for the model layers
@@ -65,26 +60,30 @@ def build_discriminator(optimizer=Adam(0.0002, 0.5)):
     Params:
         optimizer=Adam(0.0002, 0.5) - recommended values
     '''
+    # features are input, label is first column of input
     features = Input(shape=(n_features,))
     label = Input(shape=(1,), dtype='int32')
     
-    # Using an Embedding layer is recommended by the papers
+    # Using an Embedding layer is recommended by the papers, this layer turns integers into dense vectors so that the labels have real values instead of dummy 01 from onehot encoding.
     label_embedding = Flatten()(Embedding(n_classes, n_features)(label))
     
-    # Condition the discrimination of generated features 
+    # Condition the discrimination of generated features, increasing the distinction between the two class labels (i think) 
     inputs = multiply([features, label_embedding])
     
+    # This is the model. Dense has 512 neurons (potentially overfitting)
     x = Dense(512)(inputs)
+    # Activation layer, this is a leaky non linearity (any negatives turned to 0), leaky means it keeps some negative values, making the model more flexible. ReLU may be better.
     x = LeakyReLU(alpha=0.2)(x)
     x = Dense(512)(x)
     x = LeakyReLU(alpha=0.2)(x)
+    # Dropout randomly sets input to 0 with frequency of 0.4, prevents overfitting. Could lower the rate
     x = Dropout(0.4)(x)
     x = Dense(512)(x)
     x = LeakyReLU(alpha=0.2)(x)
     x = Dropout(0.4)(x)
-    
+    # You use sigmoid as an output activation as it sets the bounds between 0-1, whereas ReLU does not provide an upper bound. Sigmoid over softmax as this is a binary classification. 
     valid = Dense(1, activation='sigmoid')(x)
-    
+    # Calling and compiling the model.
     model = Model([features, label], valid)
     model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
     model.summary()
@@ -92,10 +91,11 @@ def build_discriminator(optimizer=Adam(0.0002, 0.5)):
     return model
 
 def build_generator():
+    # Setting noise and label
     noise = Input(shape=(latent_dim,))
     label = Input(shape=(1,), dtype='int32')
     
-    # Using an Embedding layer is recommended by the papers
+    # Using an Embedding layer is recommended by the papers, to flatten the textual information
     label_embedding = Flatten()(Embedding(n_classes, latent_dim)(label))
     
     # Condition the generation of features
@@ -103,6 +103,7 @@ def build_generator():
     
     x = Dense(256)(inputs)
     x = LeakyReLU(alpha=0.2)(x)
+    # returns output close to 0 and standard deviation to 1, stabilises the inputs so its less impacted by the random weights initially. Accelerates learning speed.
     x = BatchNormalization(momentum=0.8)(x)
     x = Dense(512)(x)
     x = LeakyReLU(alpha=0.2)(x)
@@ -110,7 +111,7 @@ def build_generator():
     x = Dense(1024)(x)
     x = LeakyReLU(alpha=0.2)(x)
     x = BatchNormalization(momentum=0.8)(x)
-    
+    # Using tanh instead of sigmoid as it gives better accuracy results. 
     features = Dense(n_features, activation='tanh')(x)
     
     model = Model([noise, label], features)
@@ -127,7 +128,7 @@ def build_gan(generator, discriminator, optimizer=Adam(0.0002, 0.5)):
     
     noise = Input(shape=(latent_dim,))
     label = Input(shape=(1,))
-    
+    # Building the generator and discriminator
     features = generator([noise, label])
     valid = discriminator([features, label])
     
@@ -147,7 +148,7 @@ gan = build_gan(generator, discriminator)
 
 def get_random_batch(X, y, batch_size):
     '''
-    Gets random batches of the data set to batch_size  
+    Gets random batches of the data set to batch_size, used in training for each epoch.
     Params:
         X: numpy array - features
         y: numpy array - classes
@@ -189,7 +190,7 @@ def train_gan(gan, generator, discriminator,
     '''
     
     half_batch = int(batch_size / 2)
-    
+    # setting output variables
     acc_real_hist = []
     acc_fake_hist = []
     acc_gan_hist = []
@@ -198,7 +199,7 @@ def train_gan(gan, generator, discriminator,
     loss_gan_hist = []
     
     for epoch in range(n_epochs):
-        
+        # calling random batch function
         X_batch, labels = get_random_batch(X, y, batch_size)
         
         # train with real values
@@ -206,14 +207,18 @@ def train_gan(gan, generator, discriminator,
         loss_real, acc_real = discriminator.train_on_batch([X_batch, labels], y_real)
         
         # train with fake values
+        # setting random noise within range
         noise = np.random.uniform(0, 1, (labels.shape[0], latent_dim))
+        # predict fake values generator has made
         X_fake = generator.predict([noise, labels])
+        # predict fake labels
         y_fake = np.zeros((X_fake.shape[0], 1))
+        # calculate loss metrics
         loss_fake, acc_fake = discriminator.train_on_batch([X_fake, labels], y_fake)
-        
+        # training on gan labels and values
         y_gan = np.ones((labels.shape[0], 1))
         loss_gan, acc_gan = gan.train_on_batch([noise, labels], y_gan)
-        
+        # only recording metrics every 10 epochs
         if (epoch+1) % hist_every == 0:
             acc_real_hist.append(acc_real)
             acc_fake_hist.append(acc_fake)
@@ -221,7 +226,7 @@ def train_gan(gan, generator, discriminator,
             loss_real_hist.append(loss_real)
             loss_fake_hist.append(loss_fake)
             loss_gan_hist.append(loss_gan)
-
+        # concatenating the correct format for printing
         if (epoch+1) % log_every == 0:
             lr = 'loss real: {:.3f}'.format(loss_real)
             ar = 'acc real: {:.3f}'.format(acc_real)
@@ -229,16 +234,17 @@ def train_gan(gan, generator, discriminator,
             af = 'acc fake: {:.3f}'.format(acc_fake)
             lg = 'loss gan: {:.3f}'.format(loss_gan)
             ag = 'acc gan: {:.3f}'.format(acc_gan)
-
+            # printing every 10 epochs
             print('{}, {} | {}, {} | {}, {}'.format(lr, ar, lf, af, lg, ag))
         
     return loss_real_hist, acc_real_hist, loss_fake_hist, acc_fake_hist, loss_gan_hist, acc_gan_hist
-
+# printing metrics
 loss_real_hist, acc_real_hist, \
 loss_fake_hist, acc_fake_hist, \
 loss_gan_hist, acc_gan_hist = train_gan(gan, generator, discriminator, scaled_X, y)
 
 # some plots to show the GAN learning output
+# This shows loss, so plotting error or training loss. Values close to 0 indicate the training set was learnt perfectly.
 ax, fig = plt.subplots(figsize=(15, 6))
 plt.plot(loss_real_hist)
 plt.plot(loss_fake_hist)
@@ -246,7 +252,7 @@ plt.plot(loss_gan_hist)
 plt.title('Training loss over time')
 plt.legend(['Loss real', 'Loss fake', 'Loss GAN'])
 
-
+# This is plotting accuracy over time, so the amount of correct classifications/total classifications, accuracy is lower for gan than real/fake.
 ax, fig = plt.subplots(figsize=(15, 6))
 plt.plot(acc_real_hist)
 plt.plot(acc_fake_hist)
@@ -279,22 +285,57 @@ def visualize_fake_features(fake_features, figsize=(15, 6), color='r'):
     plt.title('Real and fake features')
     plt.legend(['Class 0', 'Class 1', 'Fake'])
 
-#features_class_0 = generate_samples(0)
-#visualize_fake_features(features_class_0)
-features_class_1 = generate_samples(1)
-visualize_fake_features(features_class_1)
 
-class_1 = features_class_1
-real = scaled_X[:,0][np.where(y==1)], scaled_X[:, 0][np.where(y==1)]
+    
+
+# Generating fake samples
+features_class_0 = generate_samples(0)
+features_class_1 = generate_samples(1)
+
+# visualising in 2D, not representitive. 
+#visualize_fake_features(features_class_0)
+#visualize_fake_features(features_class_1)
+
+# Visualising in PCA 
+from sklearn.decomposition import PCA
+# Visualising the data
+pca = PCA(n_components=2)
+pca_result = pca.fit_transform(scaled_X)
 pca_class1 = pca.fit_transform(features_class_1)
-pca_real = pca.fit_transform(real)
+pca_class0 = pca.fit_transform(features_class_0)
+
+# plot dataset
+plt.figure()
+plt.scatter(pca_result[:, 0], pca_result[:,1], c=y) # pca 0 on x and pca 1 on y
+plt.title('PCA of dataset')
+
+# plotting dataset plus fakes
 plt.figure()
 plt.scatter(pca_class1[:, 0], pca_class1[:, 1])
-plt.scatter(pca_real[:, 0], pca_real[:, 1])
+plt.scatter(pca_class0[:, 0], pca_class0[:, 1])
+plt.scatter(pca_result[:, 0], pca_result[:, 1], c=y)
+plt.title('PCA of dataset with fake samples included')
+plt.legend(['Fitters', 'Non-fitters'])
 
-features_class_0 = generate_samples(0)
-visualize_fake_features(features_class_0)
+# plotting class 1 (nonfitters)
+pca_nonfitter = pca.fit_transform(outlier_only)
+plt.figure()
+plt.scatter(pca_class1[:,0], pca_class1[:,1])
+plt.scatter(pca_nonfitter[:,0], pca_nonfitter[:, 1])
+plt.title('PCA of only non-fitter class')
+plt.legend(['fake', 'real'])
+
+# plotting class 0 (fitters)
+pca_fitter = pca.fit_transform(fitter_only)
+plt.figure()
+plt.scatter(pca_class0[:,0], pca_class0[:,1])
+plt.scatter(pca_fitter[:,0], pca_fitter[:, 1])
+plt.title('PCA of only fitter class')
+plt.legend(['fake', 'real'])
+
+
+plt.show()
 
 
 
-plt.show() 
+
