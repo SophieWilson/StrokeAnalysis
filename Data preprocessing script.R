@@ -1,4 +1,3 @@
-install.packages('missForest')
 library(missForest)
 setwd('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj')
 finalset <- read.csv('11AUG10_AUDITED_FinalSET1data_paths.csv', header = TRUE, skip = 1)
@@ -7,7 +6,7 @@ finalset <- read.csv('11AUG10_AUDITED_FinalSET1data_paths.csv', header = TRUE, s
 ### Going to start by working on the final set data ####
 # first split into meta and value dataframes
 metadata <- finalset[,1:36]
-data_values <- finalset[,37:ncol(data)]
+data_values <- finalset[,37:ncol(finalset)]
 rownames(data_values) <- metadata$ID
 # removing non-numeric columns, not really sure why they are in here. ask pia
 data_values <- subset(data_values, select = -c(S17Mtr) )
@@ -129,4 +128,40 @@ split <- split(outlier , f = outlier$isoutlier )
 even_vals <- split[[1]][sample(nrow(split[[1]]), nrow(split[[2]])), ]
 
 equal_data <- rbind(even_vals, split[[2]])
+equal_data <- equal_data[,-1]
 write.csv(equal_data, 'C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/equalled_data_vals.csv')
+
+
+### Further preprocessing for the second file
+library(missForest)
+setwd('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj')
+finalset <- read.csv('followup_processed 2.csv')
+finalset <- finalset[,-1]
+
+# convert all character values to NA, this includes n/a, NA, BLANK, blank etc. 
+data_values <- data.frame(apply(finalset, 2, function(x) as.numeric(as.character(x))))
+
+# then remove participants with 75% missing data, so remove rows with over 25% missing values (there are none in this one)
+data_values <- data_values[which(rowMeans(!is.na(data_values)) >= 0.25), ]
+data_values2 <- data_values[ , which(colMeans(!is.na(data_values)) >= 0.25)] # same for columns
+
+# Filling in the missing values with appropriate
+processed <- missForest(data_values2)
+processeddf <- processed$ximp
+processed$OOBerror
+## the 00b is 0.018 so its pretty good
+## Add isoutlier column
+outliers <- read.csv('outlier_df.csv')
+processeddf$isoutlier <- processeddf$ID %in% outliers$Patient_ID
+# Rounding the numbers to 2 dp. 
+processeddf[] <- lapply(processeddf[], round, 2)
+write.csv(processeddf, 'C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/followup_processed3.csv')
+
+## follow up and final had different columns kept, so i removed the differing columns by hand so that they would be the same. 
+
+
+# make another dataframe with improvement data
+outliers2 <- outliers
+outliers2$improvement <- ifelse(outliers$X > 0, FALSE, TRUE)
+
+dat[4:6] <- ifelse(dat[, 4:6] > 0, FALSE, TRUE)

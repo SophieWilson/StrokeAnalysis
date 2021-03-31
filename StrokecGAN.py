@@ -3,8 +3,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import tensorflow as tf
-
-import tensorflow as tf
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -17,16 +15,19 @@ if gpus:
         # Memory growth must be set before GPUs have been initialized
         print(e)
 
-latent_dim = 200 # dimension of the latent space
-n_samples = 46 # size of our dataset
+latent_dim = 100 # dimension of the latent space
+n_samples = 247 # size of our dataset
 n_classes = 2 #(outlier or not)
-n_features = 89 # we use 89 features as that is the amount in the data
+n_features = 22 # we use 89 features as that is the amount in the data
 
-X = pd.read_csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/equalled_data_vals.csv')
+X = pd.read_csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/finalprocessed4.csv', index_col = 0)
+y = X['isoutlier']
 outlier_only = X[X.isoutlier == True]
 fitter_only = X[X.isoutlier == False]
-X = X.drop(X.columns[0], axis=1)
-y = X['isoutlier']
+X = X.drop(['isoutlier'], axis=1)
+X = X.drop(X.columns[0], axis = 1)
+print(list(X.columns))
+
 # 0 is fitter, 1 is non-fitter/outlier
 y = y.astype(int)
 print('Size of our dataset:', len(X))
@@ -163,7 +164,7 @@ def get_random_batch(X, y, batch_size):
 
 def train_gan(gan, generator, discriminator, 
               X, y, 
-              n_epochs=1000, batch_size=32, 
+              n_epochs=500, batch_size=52, 
               hist_every=10, log_every=100):
     '''
     Trains discriminator and generator separately in batches of size batch_size. 
@@ -300,7 +301,7 @@ features_class_1 = generate_samples(1)
 from sklearn.decomposition import PCA
 # Visualising the data
 pca = PCA(n_components=2)
-pca_result = pca.fit_transform(scaled_X)
+pca_result = pca.fit_transform(X)
 pca_class1 = pca.fit_transform(features_class_1)
 pca_class0 = pca.fit_transform(features_class_0)
 
