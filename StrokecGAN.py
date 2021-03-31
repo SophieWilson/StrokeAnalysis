@@ -18,20 +18,20 @@ if gpus:
         print(e)
 
 latent_dim = 200 # dimension of the latent space
-n_samples = 869 # size of our dataset
+n_samples = 46 # size of our dataset
 n_classes = 2 #(outlier or not)
 n_features = 89 # we use 89 features as that is the amount in the data
 
-X = pd.read_csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/final_processedvalues_outlier.csv')
+X = pd.read_csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/equalled_data_vals.csv')
 outlier_only = X[X.isoutlier == True]
 fitter_only = X[X.isoutlier == False]
 X = X.drop(X.columns[0], axis=1)
 y = X['isoutlier']
 # 0 is fitter, 1 is non-fitter/outlier
 y = y.astype(int)
-#print('Size of our dataset:', len(X))
-#print('Number of features:', X.shape[1])
-#print('Classes:', set(y))
+print('Size of our dataset:', len(X))
+print('Number of features:', X.shape[1])
+print('Classes:', set(y))
 X = np.asarray(X).astype('float32')
 
 # normalising the data to help with learning, this may not be necessary im not sure. 

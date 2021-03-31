@@ -121,3 +121,12 @@ bl2 <- bl[ bl$Baseline_ID %in% furownames, ]
 barthel2 <- lapply(cbind(bl2, fu), round, 0)
 
 
+## Equalling out the datasets
+outlier <- read.csv('final_processedvalues_outlier.csv')
+# splitting the data based on outlier class
+split <- split(outlier , f = outlier$isoutlier )
+# sampling of the even rows randomly to be the same length of outlier numbers
+even_vals <- split[[1]][sample(nrow(split[[1]]), nrow(split[[2]])), ]
+
+equal_data <- rbind(even_vals, split[[2]])
+write.csv(equal_data, 'C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/equalled_data_vals.csv')
