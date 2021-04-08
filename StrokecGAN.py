@@ -16,11 +16,11 @@ if gpus:
         print(e)
 
 latent_dim = 100 # dimension of the latent space
-n_samples = 31 # size of our dataset
+n_samples = 247 # size of our dataset
 n_classes = 2 #(outlier or not)
-n_features = 22 # we use 89 features as that is the amount in the data
+n_features = 24 # we use 89 features as that is the amount in the data
 
-X = pd.read_csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/equalled_data_vals.csv', index_col = 0)
+X = pd.read_csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/finalprocessed4.csv', index_col = 0)
 y = X['isoutlier']
 outlier_only = X[X.isoutlier == True]
 fitter_only = X[X.isoutlier == False]
@@ -76,14 +76,14 @@ def build_discriminator(optimizer=Adam(lr=0.0002, beta_1=0.5)):
     # This is the model. Dense has 512 neurons (potentially overfitting)
     x = Dense(512)(inputs)
     # Activation layer, this is a leaky non linearity (any negatives turned to 0), leaky means it keeps some negative values, making the model more flexible. ReLU may be better.
-    x = LeakyReLU(alpha=0.2)(x)
+    x = LeakyReLU(alpha=0.4)(x)
     x = Dense(512)(x)
-    x = LeakyReLU(alpha=0.2)(x)
+    x = LeakyReLU(alpha=0.4)(x)
     # Dropout randomly sets input to 0 with frequency of 0.4, prevents overfitting. Could lower the rate
-    x = Dropout(0.4)(x)
+    x = Dropout(0.2)(x)
     x = Dense(512)(x)
-    x = LeakyReLU(alpha=0.2)(x)
-    x = Dropout(0.4)(x)
+    x = LeakyReLU(alpha=0.4)(x)
+    x = Dropout(0.2)(x)
     # You use sigmoid as an output activation as it sets the bounds between 0-1, whereas ReLU does not provide an upper bound. Sigmoid over softmax as this is a binary classification. 
     valid = Dense(1, activation='sigmoid')(x)
     # Calling and compiling the model.
@@ -166,7 +166,7 @@ def get_random_batch(X, y, batch_size):
 
 def train_gan(gan, generator, discriminator, 
               X, y, 
-              n_epochs=500, batch_size=22, 
+              n_epochs=2000, batch_size=32, 
               hist_every=10, log_every=100):
     '''
     Trains discriminator and generator separately in batches of size batch_size. 
