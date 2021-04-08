@@ -16,15 +16,16 @@ if gpus:
         print(e)
 
 latent_dim = 100 # dimension of the latent space
-n_samples = 247 # size of our dataset
+n_samples = 31 # size of our dataset
 n_classes = 2 #(outlier or not)
 n_features = 22 # we use 89 features as that is the amount in the data
 
-X = pd.read_csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/finalprocessed4.csv', index_col = 0)
+X = pd.read_csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/equalled_data_vals.csv', index_col = 0)
 y = X['isoutlier']
 outlier_only = X[X.isoutlier == True]
 fitter_only = X[X.isoutlier == False]
-X = X.drop(['isoutlier'], axis=1)
+#X = X.drop(['isoutlier', 'isdeclineoutlier', 'isincreaseoutlier'], axis=1)
+X = X.drop(['isoutlier'], axis = 1)
 X = X.drop(X.columns[0], axis = 1)
 print(list(X.columns))
 
@@ -37,7 +38,8 @@ X = np.asarray(X).astype('float32')
 
 # normalising the data to help with learning, this may not be necessary im not sure. 
 from sklearn.preprocessing import MinMaxScaler
-scaler = MinMaxScaler(feature_range=(-1, 1))
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
 scaled_X = scaler.fit_transform(X)
 outlier_only = scaler.fit_transform(outlier_only)
 fitter_only = scaler.fit_transform(fitter_only)
@@ -56,7 +58,7 @@ from keras.models import Model, Sequential
 # Keras optimizers
 from keras.optimizers import Adam, RMSprop, SGD
 
-def build_discriminator(optimizer=Adam(0.0002, 0.5)):
+def build_discriminator(optimizer=Adam(lr=0.0002, beta_1=0.5)):
     '''
     Params:
         optimizer=Adam(0.0002, 0.5) - recommended values
@@ -107,10 +109,10 @@ def build_generator():
     # returns output close to 0 and standard deviation to 1, stabilises the inputs so its less impacted by the random weights initially. Accelerates learning speed.
     x = BatchNormalization(momentum=0.8)(x)
     x = Dense(512)(x)
-    x = LeakyReLU(alpha=0.2)(x)
+    x = LeakyReLU(alpha=0.4)(x)
     x = BatchNormalization(momentum=0.8)(x)
     x = Dense(1024)(x)
-    x = LeakyReLU(alpha=0.2)(x)
+    x = LeakyReLU(alpha=0.4)(x)
     x = BatchNormalization(momentum=0.8)(x)
     # Using tanh instead of sigmoid as it gives better accuracy results. 
     features = Dense(n_features, activation='tanh')(x)
@@ -120,7 +122,7 @@ def build_generator():
 
     return model
 
-def build_gan(generator, discriminator, optimizer=Adam(0.0002, 0.5)):
+def build_gan(generator, discriminator, optimizer=Adam(lr=0.0002, beta_1=0.5)):
     '''
     Combines generator and discriminator so the input goes to generator which goes to discriminator and then outputs the GAN result. 
     Params:
@@ -164,7 +166,7 @@ def get_random_batch(X, y, batch_size):
 
 def train_gan(gan, generator, discriminator, 
               X, y, 
-              n_epochs=500, batch_size=52, 
+              n_epochs=500, batch_size=22, 
               hist_every=10, log_every=100):
     '''
     Trains discriminator and generator separately in batches of size batch_size. 
@@ -285,8 +287,6 @@ def visualize_fake_features(fake_features, figsize=(15, 6), color='r'):
     plt.scatter(fake_features[:, 0], fake_features[:, 1], c=color)
     plt.title('Real and fake features')
     plt.legend(['Class 0', 'Class 1', 'Fake'])
-
-
     
 
 # Generating fake samples
@@ -301,7 +301,7 @@ features_class_1 = generate_samples(1)
 from sklearn.decomposition import PCA
 # Visualising the data
 pca = PCA(n_components=2)
-pca_result = pca.fit_transform(X)
+pca_result = pca.fit_transform(scaled_X)
 pca_class1 = pca.fit_transform(features_class_1)
 pca_class0 = pca.fit_transform(features_class_0)
 

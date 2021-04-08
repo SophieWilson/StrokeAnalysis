@@ -25,3 +25,27 @@ followup2$isoutlier <- followup2$ID %in% outlier$Patient_ID
 # 15 outliers in both. 
 table(final3$isoutlier)["TRUE"]
 table(followup2$isoutlier)['TRUE']
+
+write.csv(final3, 'C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/finalprocessed4.csv')
+write.csv(followup2, 'C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/followup_processed4.csv')
+
+## pca
+finalprocessed <- read.csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/finalprocessed4.csv', row.names = 2)
+followupprocessed <- read.csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/followup_processed4.csv', row.names = 2)
+library(ggplot2)
+library(MASS)
+library(faraway)
+final4 <- finalprocessed[,-c(1,24)]
+#final5 <- log(final4 + 0.1) # log introduces inf and NaN so need to do a different one
+#final5 <- 
+
+pcax <- prcomp(final4, center = TRUE, scale. = TRUE)
+summary(pcax)
+plot(pcax$x[,1], pcax$x[,2])
+
+followup2 <- followupprocessed[,-c(1,24)]
+pcay <- prcomp(final4, center = TRUE, scale. = TRUE)
+summary(pcay)
+plot(pcax$x[,1], pcax$x[,2])
+
+
