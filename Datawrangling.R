@@ -1,9 +1,9 @@
 setwd('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj')
 followup <- read.csv('followup_processed3.csv')
 final <- read.csv('final_processed3.csv')
-final  <- final[,-1]
-followup <- followup[,-1]
+
 final$keep <- final$ID %in% followup$ID
+
 split <- split(final, f = final$keep)
 final2 <- split[[2]]
 #sanity check to make them the same
