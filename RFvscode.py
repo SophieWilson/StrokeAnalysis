@@ -1,5 +1,3 @@
-# Random Forest Classifier
-
 # Importing the libraries
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,9 +5,10 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import LeaveOneOut, GridSearchCV, KFold, StratifiedKFold
 import re
-import seaborn as sns # nicer (easier) visualisation
+import seaborn as sns 
+
 ### Preprocessing
-# Importing the datasets
+# Importing the dataset
 datasets = pd.read_csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/finalSMOTEIMPUTED.csv')
 # subsetting real data
 outliers = datasets[datasets.origin != 'synthetic 1']
@@ -24,11 +23,14 @@ datasets['classnum'] = datasets['origin'].replace(['synthetic 1', 'synthetic 0',
 # setting x and y
 X = datasets.drop(['ID', 'classnum', 'origin'],axis=1)
 y = datasets['classnum']
+
 # Splitting the dataset into the Training set and Test set
 from sklearn.model_selection import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(X, y, stratify = y, test_size = 0.25, random_state = 0)
+
 # Grid search
 def grid_search(X_train, y_train):
+    ''' Grid search to find best parameters'''
     random_f_model = RandomForestClassifier()
     parameters = {
         'criterion': ['gini','entropy'], 
@@ -41,6 +43,7 @@ def grid_search(X_train, y_train):
     grid_search = rf_grid_search.fit(X_train, y_train)
     # best model according to grid search 
     best_random_f_model = rf_grid_search.best_estimator_ 
+    # can print params if wanted.
     #print(best_random_f_model.get_params())
     return best_random_f_model
 
@@ -53,6 +56,7 @@ all_accuracies = cross_val_score(estimator=best_random_f_model, X=X_train, y=y_t
 
 # Feature Importance
 def feature_importance(X, best_random_f_model):
+    ''' Plot feature importance graph '''
     df_importance = pd.DataFrame(list(zip(X.columns.values,best_random_f_model.feature_importances_)),columns=['column_name','feature_importance'])
     df_importance = df_importance.set_index(['column_name'])
     df_importance.sort_values(['feature_importance'],ascending=False,inplace=True)
@@ -69,33 +73,39 @@ y_pred = best_random_f_model.predict(X_test)
 # Probabilities for each class
 rf_probs = best_random_f_model.predict_proba(X_test)[:, 1]
 
+# ROC auc plot for predictions
 def prediction(best_random_f_model, X_test, y_pred, rf_probs):
+    ''' Plot ROC AUC for predictions using best model '''
     import sklearn.metrics as metrics
     from sklearn.metrics import roc_curve, roc_auc_score
     # calculate roc curve
     prediction.fpr, prediction.tpr, thresholds = roc_curve(y_test, rf_probs)
     roc_auc = metrics.auc(prediction.fpr,prediction.tpr)
     # Plot ROC
-    plt.title('Receiver Operating Characteristic')
-    plt.plot(prediction.fpr, prediction.tpr, 'b', label = 'AUC = %0.2f' % roc_auc)
-    plt.legend(loc = 'lower right')
-    plt.plot([0, 1], [0, 1],'r--')
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.ylabel('True Positive Rate')
-    plt.xlabel('False Positive Rate')
+    fig, ax = plt.subplots(figsize=(10,7))
+    ax.plot(prediction.fpr, prediction.tpr, label='Random forest')
+    ax.plot(np.linspace(0, 1, 100),
+         np.linspace(0, 1, 100),
+         label='Baseline',
+         linestyle='--')
+    plt.title('Receiver Operating Characteristic Curve', fontsize=18)
+    plt.ylabel('True positive rate', fontsize=16)
+    plt.xlabel('False positive rate', fontsize=16)
+    plt.legend(fontsize=12)
     plt.show()
 
 prediction(best_random_f_model,X_test, y_pred, rf_probs)
 
 def confusion_mat(y_test, y_pred):
+    ''' Make confusion matrix '''
     # Making the Confusion Matrix 
     from sklearn.metrics import confusion_matrix
-    #cm = confusion_matrix(y_test, y_pred)
+    cm = confusion_matrix(y_test, y_pred)
     #plot it
     np.set_printoptions(precision=2)
 
 def plot_confusionmat(best_random_f_model, X_test, y_test):
+    ''' Plot confusion matrix '''
     from sklearn.metrics import plot_confusion_matrix
      # Plot non-normalized confusion matrix
     titles_options = [("Confusion matrix, without normalization", None),
@@ -112,15 +122,23 @@ def plot_confusionmat(best_random_f_model, X_test, y_test):
 confusion_mat(y_test, y_pred)
 plot_confusionmat(best_random_f_model, X_test, y_test)
 
-from sklearn import metrics
-from sklearn.metrics import classification_report
-print('Mean Absolute Error:', metrics.mean_absolute_error(y_test, y_pred))
-print('Mean Squared Error:', metrics.mean_squared_error(y_test, y_pred))
-print('Mean Accuracy', np.mean(all_accuracies))
-print('Sensitivity', prediction.tpr/(prediction.tpr + prediction.fpr))
-print(classification_report(y_test, y_pred, labels= [0, 1]))
+def metrics_report(y_test, y_pred, cross_val_metrics, prediction_tpr, prediction_fpr):
+    ''' y_test and y_pred are labels, cross_val_metrics is the output of cross_val_score sklearn prediction_tpr/fpr are outputs from roc_curve function sklearn '''   
+    from sklearn import metrics
+    from sklearn.metrics import classification_report
+    print('Mean Absolute Error:', metrics.mean_absolute_error(y_test, y_pred))
+    print('Mean Squared Error:', metrics.mean_squared_error(y_test, y_pred))
+    print('Mean Accuracy', np.mean(cross_val_metrics))
+    print('Sensitivity', prediction_tpr/(prediction_tpr + prediction_fpr))
+    print(classification_report(y_test, y_pred, labels= [0, 1]))
 
-# from treeinterpreter import treeinterpreter as ti
+metrics_report(y_test, y_pred, all_accuracies, prediction.tpr, prediction.fpr)
+
+
+##### To try and get variable importance in group classification, this is pretty 
+# complicated and not very reliable as random forest isn't made for it. Probably best to use plsda.
+
+#  from treeinterpreter import treeinterpreter as ti
 # prediction, bias, contributions = ti.predict(estimator, X_test[6:7])
 # N = 22 # no of entries in plot , 4 ---> features & 1 ---- class label
 # fitter = []
