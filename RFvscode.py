@@ -60,7 +60,8 @@ def feature_importance(X, best_random_f_model):
     df_importance = pd.DataFrame(list(zip(X.columns.values,best_random_f_model.feature_importances_)),columns=['column_name','feature_importance'])
     df_importance = df_importance.set_index(['column_name'])
     df_importance.sort_values(['feature_importance'],ascending=False,inplace=True)
-    # print(df_importance)
+    # export list
+    df_importance.to_csv(r'C:\Users\Mischa\Documents\Uni Masters\Module 6 - Group proj\importancelist.csv')
     plt.figure(figsize=(20,10))
     sns.barplot(x='column_name',y='feature_importance',data=df_importance.reset_index(),palette='muted')
     #ticks_information = plt.xticks(rotation=65)
@@ -92,7 +93,7 @@ def prediction(best_random_f_model, X_test, y_pred, rf_probs):
     plt.ylabel('True positive rate', fontsize=16)
     plt.xlabel('False positive rate', fontsize=16)
     plt.legend(fontsize=12)
-    plt.show()
+    #plt.show()
 
 prediction(best_random_f_model,X_test, y_pred, rf_probs)
 
@@ -130,10 +131,17 @@ def metrics_report(y_test, y_pred, cross_val_metrics, prediction_tpr, prediction
     print('Mean Squared Error:', metrics.mean_squared_error(y_test, y_pred))
     print('Mean Accuracy', np.mean(cross_val_metrics))
     print('Sensitivity', prediction_tpr/(prediction_tpr + prediction_fpr))
-    print(classification_report(y_test, y_pred, labels= [0, 1]))
+    metrics_report.classification_rep = classification_report(y_test, y_pred, labels= [0, 1], output_dict=True)
+    print(classification_report)
+
+def outputreport(classification_rep):
+    classification_df = pd.DataFrame(classification_rep).transpose()
+    classification_df.to_csv(r'C:\Users\Mischa\Documents\Uni Masters\Module 6 - Group proj\classification_report.csv')
+
 
 metrics_report(y_test, y_pred, all_accuracies, prediction.tpr, prediction.fpr)
 
+outputreport(metrics_report.classification_rep)   
 
 ##### To try and get variable importance in group classification, this is pretty 
 # complicated and not very reliable as random forest isn't made for it. Probably best to use plsda.
