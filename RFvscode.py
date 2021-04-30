@@ -10,28 +10,42 @@ import seaborn as sns
 ### Preprocessing
 # Importing the dataset
 datasets = pd.read_csv('C:/Users/Mischa/Documents/Uni Masters/Module 6 - Group proj/finalSMOTEIMPUTED.csv')
+### TEST
 # subsetting real data
-outliers = datasets[datasets.origin != 'synthetic 1']
-# 1 is non-fitter, 0 is fitter
-outliers['classnum'] = outliers['origin'].replace(['original 1', 'original 0'], [1, 0])
-outliers_X = outliers.drop(['ID', 'classnum', 'origin'],axis=1)
+print('test')
+outliers = datasets[datasets.origin == 'original 1']
+outliers['classnum'] = 1
 outliers_y = outliers['classnum']
+outliers_X = outliers.drop(['ID', 'classnum', 'origin'],axis=1)
+#print(outliers_X, outliers_y)
+
+no_outlier = datasets[datasets.origin != 'original 1']
+no_outlier['classnum'] = no_outlier['origin'].replace(['synthetic 1', 'synthetic 0', 
+'original 0'], [1, 0, 0])
+#print(no_outlier)
+no_outlier_X = no_outlier.drop(['ID', 'classnum', 'origin'],axis=1)
+no_outlier_y = no_outlier['classnum']
+#print(no_outlier_X, no_outlier_y)
+# 1 is non-fitter, 0 is fitter
+### TEST
 
 # making class labels numeric 
-datasets['classnum'] = datasets['origin'].replace(['synthetic 1', 'synthetic 0', 'original 1', 
-'original 0'], [1, 0, 1, 0])
-# setting x and y
-X = datasets.drop(['ID', 'classnum', 'origin'],axis=1)
-y = datasets['classnum']
+# datasets['classnum'] = datasets['origin'].replace(['synthetic 1', 'synthetic 0', 'original 1', 
+# 'original 0'], [1, 0, 1, 0])
+# # setting x and y
+# X = datasets.drop(['ID', 'classnum', 'origin'],axis=1)
+# y = datasets['classnum']
+
+
 
 # Splitting the dataset into the Training set and Test set
-from sklearn.model_selection import train_test_split
-X_train, X_test, y_train, y_test = train_test_split(X, y, stratify = y, test_size = 0.25, random_state = 0)
+#from sklearn.model_selection import train_test_split
+#X_train, X_test, y_train, y_test = train_test_split(X, y, stratify = y, test_size = 0.3, random_state = 1)
 
 # Grid search
-def grid_search(X_train, y_train):
+def grid_search(X_train, y_train, cv):
     ''' Grid search to find best parameters'''
-    random_f_model = RandomForestClassifier()
+    
     parameters = {
         'criterion': ['gini','entropy'], 
         'n_estimators': [2,3,5,10, 200], 
@@ -39,20 +53,63 @@ def grid_search(X_train, y_train):
         'min_samples_leaf':[2,5,7,10, 20],
     }
     # weighted == F1 Measure for multi-class
-    rf_grid_search = GridSearchCV(random_f_model, parameters, cv=5,scoring='balanced_accuracy') 
-    grid_search = rf_grid_search.fit(X_train, y_train)
+    rf_grid_search = GridSearchCV(random_f_model, parameters, cv= cv,scoring='balanced_accuracy') 
+    grid_search.grid_search = rf_grid_search.fit(X_train, y_train)
     # best model according to grid search 
     best_random_f_model = rf_grid_search.best_estimator_ 
     # can print params if wanted.
     #print(best_random_f_model.get_params())
     return best_random_f_model
 
-best_random_f_model = grid_search(X_train, y_train)
+from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_val_predict, cross_validate
+from sklearn.metrics import accuracy_score
+from numpy import mean
+from numpy import std
+#print(no_outlier_X.iloc[1,:])
+cv_outer = StratifiedKFold(n_splits=5, shuffle=True, random_state = 1)
+outer_results = list()
+for train_ix, test_ix in cv_outer.split(no_outlier_X, no_outlier_y):
+    X_train_norm, X_test_norm = no_outlier_X.iloc[train_ix, :], no_outlier_X.iloc[test_ix, :]
+    y_train_norm, y_test_norm = no_outlier_y.iloc[train_ix], no_outlier_y.iloc[test_ix]
+
+    for train_iz, test_iz in cv_outer.split(outliers_X, outliers_y):
+        X_train_out, X_test_out = outliers_X.iloc[train_iz, :], outliers_X.iloc[test_iz, :]
+        y_train_out, y_test_out = outliers_y.iloc[train_iz], outliers_y.iloc[test_iz]
+    
+    # Making fitters the same size as non fitters
+        X_test_norm_sample = X_test_norm.sample(n=len(y_test_out))
+        y_test_norm_sample = y_test_norm[X_test_norm_sample.index]
+        # concatenating the samples to form appropriate training and testing splits
+        X_train = pd.concat([X_train_norm, X_train_out])    
+        y_train = pd.concat([y_train_norm, y_train_out])
+        X_test = pd.concat([X_test_norm_sample, X_test_out])
+        y_test = pd.concat([y_test_norm_sample, y_test_out])
+        #print(X_test, y_test)
+        # configure the cross-validation procedure
+        cv_inner = KFold(n_splits=3, shuffle=True, random_state=1)
+        random_f_model = RandomForestClassifier(random_state=1)
+        # define search
+        best_random_f_model = grid_search(X_train, y_train, cv_inner)
+        # Predicting the test set results
+        y_pred = best_random_f_model.predict(X_test)
+        # Probabilities for each class
+        rf_probs = best_random_f_model.predict_proba(X_test)[:, 1]
+        # evaluate model on the hold out dataset
+        all_accuracies = accuracy_score(y_test, y_pred)
+        # store the result
+        outer_results.append(all_accuracies)
+        # report progress
+        print('>acc=%.3f, est=%.3f, cfg=%s' % (all_accuracies, grid_search.grid_search.best_score_, grid_search.grid_search.best_params_))
+    # summarize the estimated performance of the model
+    print('Accuracy: %.3f (%.3f)' % (mean(outer_results), std(outer_results)))
 
 # Cross fold validation, five iterations
-from sklearn.model_selection import cross_val_score, StratifiedKFold
-skf = StratifiedKFold(n_splits = 5)
-all_accuracies = cross_val_score(estimator=best_random_f_model, X=X_train, y=y_train, cv=skf)
+#skf = StratifiedKFold(n_splits = 5)
+#all_accuracies = cross_val_score(estimator=best_random_f_model, X=X, y=y, cv=skf)
+
+#y_pred = cross_val_predict(best_random_f_model, X, y, cv = skf)
+#cross_val = cross_validate(best_random_f_model, X, y, cv= skf)
+
 
 # Feature Importance
 def feature_importance(X, best_random_f_model):
@@ -67,12 +124,9 @@ def feature_importance(X, best_random_f_model):
     #ticks_information = plt.xticks(rotation=65)
     plt.show()
 
-feature_importance(X, best_random_f_model)
+feature_importance(X_test, best_random_f_model)
 
-# Predicting the test set results
-y_pred = best_random_f_model.predict(X_test)
-# Probabilities for each class
-rf_probs = best_random_f_model.predict_proba(X_test)[:, 1]
+feature_importance(X_train, best_random_f_model)
 
 # ROC auc plot for predictions
 def prediction(best_random_f_model, X_test, y_pred, rf_probs):
