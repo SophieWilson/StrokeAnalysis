@@ -66,7 +66,7 @@ from sklearn.metrics import accuracy_score
 from numpy import mean
 from numpy import std
 #print(no_outlier_X.iloc[1,:])
-cv_outer = StratifiedKFold(n_splits=5, shuffle=True, random_state = 1)
+cv_outer = StratifiedKFold(n_splits=5, shuffle=True)
 outer_results = list()
 for train_ix, test_ix in cv_outer.split(no_outlier_X, no_outlier_y):
     X_train_norm, X_test_norm = no_outlier_X.iloc[train_ix, :], no_outlier_X.iloc[test_ix, :]
@@ -86,7 +86,7 @@ for train_ix, test_ix in cv_outer.split(no_outlier_X, no_outlier_y):
         y_test = pd.concat([y_test_norm_sample, y_test_out])
         #print(X_test, y_test)
         # configure the cross-validation procedure
-        cv_inner = KFold(n_splits=3, shuffle=True, random_state=1)
+        cv_inner = KFold(n_splits=3, shuffle=True)
         random_f_model = RandomForestClassifier(random_state=1)
         # define search
         best_random_f_model = grid_search(X_train, y_train, cv_inner)
