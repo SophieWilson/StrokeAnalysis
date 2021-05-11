@@ -3,7 +3,7 @@ Various files relating to a large data analysis interested in stroke recovery us
 
 ###### ** Preprocessing files **
 (These files are not in this repo as they relate to the actual data used which is not publically available)
-datapreprocessing - Inital preprocessing and exploration, this was run first. 
+datapreprocessing - Inital preprocessing and data exploration/visualisation using PCA etc., this was run first. 
 datawrangling.py - Some additional code required to subset outlier class (offshoot of preprocessing)
 SMOTE.py - The smote augmentation of data
 
